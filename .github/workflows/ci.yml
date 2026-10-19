@@ -91,8 +91,14 @@ jobs:
           "app alive: $(-not $p.HasExited) exit: $($p.ExitCode)"
           Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | Select-Object -First 1 -ExpandProperty CommandLine
           try { (Invoke-WebRequest http://127.0.0.1:9222/json/version -TimeoutSec 5).Content } catch { "no devtools: $_" }
-          Get-ChildItem "$env:LOCALAPPDATA\dev.rune.desktop" -Recurse -Depth 2 -ErrorAction SilentlyContinue | Select-Object -First 15 FullName
           Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          Start-Sleep 3
+          "elevated: $(([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))"
+          runas /trustlevel:0x20000 "$env:RUNE_E2E_APP"
+          Start-Sleep 20
+          Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | Select-Object -First 1 -ExpandProperty CommandLine
+          try { "de-elevated: " + (Invoke-WebRequest http://127.0.0.1:9222/json/version -TimeoutSec 5).Content } catch { "de-elevated no devtools: $_" }
+          Get-Process rune -ErrorAction SilentlyContinue | Stop-Process -Force
           Remove-Item Env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
           pnpm test:e2e:app
 
