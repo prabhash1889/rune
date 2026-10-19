@@ -63,7 +63,7 @@ Terminal palette: a dedicated 16-color ANSI set tuned for `--surface`, defined n
 
 ```
 +--------------------------------------------------------------------------------+
-| [mark] rune  [=]        [ Agent | Code | Thread ]      [grid][usage][o][bell][=]|  44px title bar
+| [mark] rune [=] [ Agent | Code | Thread | Orchestrate ]  [grid][7d][o][bell][=]|  44px title bar
 +-----------+-------------------------------------------------+------------------+
 | Workspaces|  +----seat----+ +----seat----+ +----seat----+   | Dash Tasks ...   |
 |  proj-a   |  | o * Fehu ..| | o * Uruz ..| | o * Thurs .|   |                  |
@@ -82,6 +82,46 @@ Terminal palette: a dedicated 16-color ANSI set tuned for `--surface`, defined n
   9 -> 3x3, 10-12 -> 4x3, 13-16 -> 4x4. Odd counts may use a wide bottom row (as in
   `sample/6.png`). Panes never go below 280x160; beyond that the grid scrolls.
 - Section labels in dialogs: 11px caps, `--text-3`, 24px above content.
+- **Mode switcher:** SegmentedControl centered in the title bar, 28px tall, segments sized to
+  their label (13px, 500 weight), active segment `--surface-3` with `--glow`.
+  `Ctrl/Cmd+1..4` switch modes. A mode keeps its own state when you leave it. A mode not
+  built yet stays visible but disabled (`--text-3`, no hover), with a `Coming soon` tooltip;
+  its shortcut does nothing.
+
+### Orchestrate mode
+
+```
++--------------------------------------------------------------------------------+
+| [mark] rune [=] [ Agent | Code | Thread | Orchestrate ]  [grid][7d][o][bell][=]|
++-----------+-------------------------------------------------+------------------+
+| Workspaces|  Auth rewrite      active      [Autopilot >]    | Saga chat        |
+|  proj-a   |  Goal: one line, editable                       |                  |
+|   Sagas   |  SPECS  product  tech  api         [+ Spec]     |  Rune Agent      |
+|   > Auth  |  TASKS                             [+ Task]     |  messages,       |
+|   Billing |  o 1 Session store   merged   Fehu   0 0 1      |  clarifying      |
+|  proj-b   |  o 2 Login API       checking Uruz   1 2 0      |  questions as    |
+|           |  o 3 Login UI  <- 2  ready                      |  answer chips    |
+|           |  RUN Login API  rune/auth/login-api [Open seat] |                  |
+|           |   plan | diff | findings (3)                    |  [ ask...     ]  |
++-----------+-------------------------------------------------+------------------+
+```
+
+- Sidebar lists sagas under each workspace (below groups), with a status dot.
+- Center is the saga board: header (title, status Badge, saga branch `rune/<saga>` in mono
+  `--text-3`, Autopilot button, `...` menu with `Merge saga` and `Sweep worktrees`), goal, spec chips,
+  then the task graph as an ordered list with dependency hints (`<- 2`). Each task row:
+  StatusDot for its latest run, title, run status, seat rune name, finding counts by
+  severity. Selecting a task opens its run panel below (tabs: plan, diff, findings).
+- Right column reuses the dock slot (420px, same resize rules) for saga chat. Clarifying
+  questions render as chips the user can click instead of typing.
+- `Open seat` switches to Code mode with that seat focused. Run seats live in a group named
+  after the saga, so they also show in the grid.
+- Specs and plans open in a read/write markdown view in the center (textarea + preview).
+  Not a code editor.
+- Severity colors: blocker `--err`, major `--warn`, minor `--done`, outdated `--idle`.
+  Always paired with the word, never color alone.
+- Autopilot running: the button shows `Pause`, the saga Badge shows `autopilot`, and a
+  paused saga shows its reason inline (`Paused: Uruz needs input`).
 
 ## Components
 
@@ -90,7 +130,9 @@ disabled states.
 
 Button (primary, secondary, ghost, icon), SegmentedControl, Tabs (dock style, with badge and
 close), SidebarRow (with count, nested, hover actions), Tile (selectable, used for agents and
-presets), Dialog, Menu, Tooltip, Toast, Badge, StatusDot, Kbd, Input, CommandPalette.
+presets), Dialog, Menu, Tooltip, Toast, Badge, StatusDot, Kbd, Input, CommandPalette,
+MarkdownView (read/write), DiffView (read-only, unified), FindingRow (severity, file:line,
+body, checkbox), ChoiceChips (clarifying answers).
 
 ## Quality checklist (every UI PR)
 
