@@ -2,6 +2,7 @@
 id: NNN
 title: <feature name>
 feature: F00            # id from docs/product.md
+depends: []             # spec ids that must be approved (and built) first
 status: draft           # draft | approved | shipped | dropped
 owner: <human handle>
 ---
