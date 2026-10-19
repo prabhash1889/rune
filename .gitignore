@@ -1,0 +1,28 @@
+# deps and builds
+node_modules/
+dist/
+target/
+*.tsbuildinfo
+
+# test output
+coverage/
+test-results/
+playwright-report/
+
+# env and secrets
+.env
+.env.*
+!.env.example
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# third-party reference screenshots, kept local only
+sample/
+
+# local agent state
+.claude/settings.local.json
