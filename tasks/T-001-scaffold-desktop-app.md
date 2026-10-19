@@ -1,8 +1,8 @@
 ---
 id: T-001
 title: Scaffold the desktop app and toolchain
-status: todo
-owner:
+status: in-progress
+owner: agent:claude-0d77
 spec: "-"
 depends: []
 touches: [apps/desktop/**, package.json, pnpm-workspace.yaml, Cargo.toml, biome.json, .github/**, AGENTS.md, .gitignore]
