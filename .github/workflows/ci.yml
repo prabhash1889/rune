@@ -47,6 +47,13 @@ jobs:
 
       - run: pnpm build
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rune-${{ runner.os }}
+          path: target/release/bundle/
+          retention-days: 7
+          if-no-files-found: error
+
       - name: E2E (UI)
         run: |
           pnpm exec playwright install --with-deps chromium
@@ -74,7 +81,15 @@ jobs:
         env:
           RUNE_E2E_APP: ${{ github.workspace }}\target\release\rune.exe
         run: |
-          Get-Command msedgedriver -All | ForEach-Object { "$($_.Source) $(& $_.Source --version)" }
+          # ponytail: temporary diagnostics for DevToolsActivePort on the runner, remove once green
+          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
+          $p = Start-Process $env:RUNE_E2E_APP -PassThru
+          Start-Sleep 20
+          "app alive: $(-not $p.HasExited) exit: $($p.ExitCode)"
+          try { (Invoke-WebRequest http://127.0.0.1:9222/json/version -TimeoutSec 5).Content } catch { "no devtools: $_" }
+          Get-ChildItem "$env:LOCALAPPDATA\dev.rune.desktop" -Recurse -Depth 2 -ErrorAction SilentlyContinue | Select-Object -First 15 FullName
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          Remove-Item Env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
           pnpm test:e2e:app
 
       - name: E2E (full app)
@@ -82,10 +97,3 @@ jobs:
         env:
           RUNE_E2E_APP: ${{ github.workspace }}/target/release/rune
         run: xvfb-run pnpm test:e2e:app
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: rune-${{ runner.os }}
-          path: target/release/bundle/
-          retention-days: 7
-          if-no-files-found: error

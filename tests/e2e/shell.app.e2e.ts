@@ -23,9 +23,7 @@ async function webdriver(method: string, path: string, body?: unknown) {
     if (!res.ok) throw new Error(json.value.message);
     return json.value;
   } catch (e) {
-    throw new Error(`${method} ${path}: ${e}
---- driver output ---
-${driverLog}`);
+    throw new Error(`${method} ${path}: ${e}\n--- driver output ---\n${driverLog}`);
   }
 }
 
