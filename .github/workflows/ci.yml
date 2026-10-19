@@ -82,6 +82,11 @@ jobs:
           RUNE_E2E_APP: ${{ github.workspace }}\target\release\rune.exe
         run: |
           # ponytail: temporary diagnostics for DevToolsActivePort on the runner, remove once green
+          Get-ChildItem env: | Where-Object Name -match 'WEBVIEW2|EDGE' | Format-Table -AutoSize | Out-String -Width 300
+          Get-ChildItem 'HKLM:\SOFTWARE\Policies\Microsoft\Edge', 'HKCU:\SOFTWARE\Policies\Microsoft\Edge' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { $_.Name; $_ | Get-ItemProperty | Out-String -Width 300 }
+          Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Edge', 'HKCU:\SOFTWARE\Policies\Microsoft\Edge' -ErrorAction SilentlyContinue | Out-String -Width 300
+          $pol = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge'
+          if ((Get-ItemProperty $pol -ErrorAction SilentlyContinue).RemoteDebuggingAllowed -eq 0) { Set-ItemProperty $pol RemoteDebuggingAllowed 1; "re-enabled RemoteDebuggingAllowed" }
           $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
           $p = Start-Process $env:RUNE_E2E_APP -PassThru
           Start-Sleep 20
