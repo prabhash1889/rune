@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Linux system deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf webkit2gtk-driver xvfb
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+
+      - name: Generated files are committed
+        run: git diff --exit-code
+
+      - run: pnpm build
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rune-${{ runner.os }}
+          path: target/release/bundle/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: E2E (UI)
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm test:e2e
+
+      - name: Install tauri-driver
+        if: runner.os != 'macOS'
+        run: cargo install tauri-driver --locked
+
+      # tauri-driver needs an Edge driver matching the installed WebView2 runtime.
+      - name: Install msedgedriver
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Update the runner's WebView2 to current Evergreen, what users have.
+          Invoke-WebRequest 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile "$env:RUNNER_TEMP\wv2setup.exe"
+          Start-Process "$env:RUNNER_TEMP\wv2setup.exe" '/silent /install' -Wait
+          $key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          $version = (Get-ItemProperty $key).pv
+          $dir = "$env:RUNNER_TEMP\msedgedriver"
+          Invoke-WebRequest "https://msedgedriver.microsoft.com/$version/edgedriver_win64.zip" -OutFile "$dir.zip"
+          Expand-Archive "$dir.zip" $dir
+          $dir | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          "WebView2 $version"
+
+      - name: E2E (full app)
+        if: runner.os == 'Windows'
+        env:
+          RUNE_E2E_APP: ${{ github.workspace }}\target\release\rune.exe
+        run: |
+          # ponytail: temporary diagnostics for DevToolsActivePort on the runner, remove once green
+          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
+          $p = Start-Process $env:RUNE_E2E_APP -PassThru
+          Start-Sleep 20
+          "app alive: $(-not $p.HasExited) exit: $($p.ExitCode)"
+          Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | Select-Object -First 1 -ExpandProperty CommandLine
+          try { (Invoke-WebRequest http://127.0.0.1:9222/json/version -TimeoutSec 5).Content } catch { "no devtools: $_" }
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          Start-Sleep 3
+          "elevated: $(([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))"
+          runas /trustlevel:0x20000 "$env:RUNE_E2E_APP"
+          Start-Sleep 20
+          Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | Select-Object -First 1 -ExpandProperty CommandLine
+          try { "de-elevated: " + (Invoke-WebRequest http://127.0.0.1:9222/json/version -TimeoutSec 5).Content } catch { "de-elevated no devtools: $_" }
+          Get-Process rune -ErrorAction SilentlyContinue | Stop-Process -Force
+          Remove-Item Env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
+          pnpm test:e2e:app
+
+      - name: E2E (full app)
+        if: runner.os == 'Linux'
+        env:
+          RUNE_E2E_APP: ${{ github.workspace }}/target/release/rune
+        run: xvfb-run pnpm test:e2e:app

@@ -38,4 +38,10 @@ AGENTS.md table working and green in CI.
 
 ## Notes
 
+- `touches` omits `tests/e2e/**`, but Steps require the smoke tests there, so this task adds
+  `tests/e2e/shell.e2e.ts` and `tests/e2e/shell.app.e2e.ts`. No other task touches it yet.
+- Playwright lives in the root `package.json` because the tests sit outside `apps/desktop`.
+- Windows `cargo test` needs the Common Controls manifest in test binaries too; `build.rs`
+  embeds it into every artifact (tauri-build only does the app binary).
+
 ## Outcome
