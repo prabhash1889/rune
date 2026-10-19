@@ -7,15 +7,25 @@ const app = process.env.RUNE_E2E_APP;
 const driver = "http://127.0.0.1:4444";
 const ELEMENT = "element-6066-11e4-a52e-4f735466cecf";
 
+// tauri-driver and native driver output, shown when a WebDriver call fails.
+let driverLog = "";
+
 async function webdriver(method: string, path: string, body?: unknown) {
-  const res = await fetch(driver + path, {
-    method,
-    headers: { "content-type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const json = (await res.json()) as { value: Record<string, unknown> & { message?: string } };
-  if (!res.ok) throw new Error(`${method} ${path}: ${json.value.message}`);
-  return json.value;
+  try {
+    const res = await fetch(driver + path, {
+      method,
+      headers: { "content-type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(20_000),
+    });
+    const json = (await res.json()) as { value: Record<string, unknown> & { message?: string } };
+    if (!res.ok) throw new Error(json.value.message);
+    return json.value;
+  } catch (e) {
+    throw new Error(`${method} ${path}: ${e}
+--- driver output ---
+${driverLog}`);
+  }
 }
 
 let tauriDriver: ChildProcess;
@@ -23,7 +33,12 @@ let session: string;
 
 test.beforeAll(async () => {
   test.skip(!app, "set RUNE_E2E_APP to a built Rune binary");
-  tauriDriver = spawn("tauri-driver", [], { stdio: "inherit" });
+  tauriDriver = spawn("tauri-driver", [], { stdio: ["ignore", "pipe", "pipe"] });
+  const collect = (chunk: Buffer) => {
+    driverLog += chunk.toString();
+  };
+  tauriDriver.stdout?.on("data", collect);
+  tauriDriver.stderr?.on("data", collect);
   await expect
     .poll(
       () =>

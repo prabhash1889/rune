@@ -67,12 +67,15 @@ jobs:
           Invoke-WebRequest "https://msedgedriver.microsoft.com/$version/edgedriver_win64.zip" -OutFile "$dir.zip"
           Expand-Archive "$dir.zip" $dir
           $dir | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          "WebView2 $version"
 
       - name: E2E (full app)
         if: runner.os == 'Windows'
         env:
           RUNE_E2E_APP: ${{ github.workspace }}\target\release\rune.exe
-        run: pnpm test:e2e:app
+        run: |
+          Get-Command msedgedriver -All | ForEach-Object { "$($_.Source) $(& $_.Source --version)" }
+          pnpm test:e2e:app
 
       - name: E2E (full app)
         if: runner.os == 'Linux'
