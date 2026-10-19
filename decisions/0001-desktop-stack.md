@@ -1,7 +1,7 @@
 ---
 id: 0001
 title: Desktop stack - Tauri 2, Rust core, React + TypeScript UI
-status: proposed
+status: accepted
 date: 2026-10-19
 ---
 
