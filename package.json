@@ -1,0 +1,23 @@
+{
+  "name": "rune",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @rune/desktop tauri dev",
+    "build": "pnpm --filter @rune/desktop tauri build",
+    "lint": "biome check . && cargo fmt --all --check && cargo clippy --workspace --all-targets --locked -- -D warnings",
+    "format": "biome check --write . && cargo fmt --all",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test && cargo test --workspace --locked",
+    "test:e2e": "playwright test -c apps/desktop/playwright.config.ts --project=ui",
+    "test:e2e:app": "playwright test -c apps/desktop/playwright.config.ts --project=app",
+    "check": "pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@playwright/test": "1.64.1"
+  }
+}

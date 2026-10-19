@@ -16,8 +16,8 @@ Behavior is modeled on BridgeMind (cockpit) and Traycer (orchestration); identit
 - How it looks: [docs/design.md](docs/design.md)
 - Reference products teardown: [docs/research.md](docs/research.md)
 
-Status: pre-implementation. The stack is set by [ADR-0001](decisions/0001-desktop-stack.md)
-(accepted); the orchestration engine is proposed in
+Status: app scaffolded (T-001), features in progress. The stack is set by
+[ADR-0001](decisions/0001-desktop-stack.md) (accepted); the orchestration engine is proposed in
 [ADR-0002](decisions/0002-orchestration-engine.md).
 
 ## Repo map
@@ -102,7 +102,7 @@ apps/desktop/
     features/<name>/    one folder per feature: components, state, hooks, tests
     ui/                 shared primitives (Button, Tabs, Dialog...), tokens only
     lib/                framework-free helpers
-    ipc/                generated Rust bindings - never hand-edit
+    ipc/                generated Rust bindings (tauri-specta) - never hand-edit
   src-tauri/
     src/
       <domain>/         one module per domain: pty, agents, workspace, store, ...
@@ -121,17 +121,21 @@ apps/desktop/
 
 ## Commands
 
-To be confirmed by T-001. Keep this table true.
+Keep this table true. Requires Node 22+, pnpm 9, stable Rust, and the
+[Tauri prerequisites](https://tauri.app/start/prerequisites/) for your OS.
 
 | Task | Command |
 |------|---------|
 | Install | `pnpm install` |
 | Run app | `pnpm dev` |
-| Lint + format check | `pnpm lint` |
+| Build app + installers | `pnpm build` |
+| Lint + format check | `pnpm lint` (Biome, rustfmt, clippy) |
+| Fix formatting | `pnpm format` |
 | Typecheck | `pnpm typecheck` |
-| Unit tests (TS + Rust) | `pnpm test` |
-| E2E tests | `pnpm test:e2e` |
-| Everything CI runs | `pnpm check` |
+| Unit tests (TS + Rust) | `pnpm test` (Vitest, `cargo test`; also regenerates `src/ipc/`) |
+| E2E tests (UI) | `pnpm test:e2e` (Playwright on the Vite UI; first run `pnpm exec playwright install chromium`) |
+| E2E tests (full app) | `RUNE_E2E_APP=<built binary> pnpm test:e2e:app` (needs `tauri-driver` and the native driver; Windows and Linux) |
+| Everything CI runs | `pnpm check`, then `pnpm build` and both e2e suites (`.github/workflows/ci.yml`) |
 
 ## Testing
 
