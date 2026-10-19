@@ -68,6 +68,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          # Update the runner's WebView2 to current Evergreen, what users have.
+          Invoke-WebRequest 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile "$env:RUNNER_TEMP\wv2setup.exe"
+          Start-Process "$env:RUNNER_TEMP\wv2setup.exe" '/silent /install' -Wait
           $key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
           $version = (Get-ItemProperty $key).pv
           $dir = "$env:RUNNER_TEMP\msedgedriver"
@@ -82,15 +85,11 @@ jobs:
           RUNE_E2E_APP: ${{ github.workspace }}\target\release\rune.exe
         run: |
           # ponytail: temporary diagnostics for DevToolsActivePort on the runner, remove once green
-          Get-ChildItem env: | Where-Object Name -match 'WEBVIEW2|EDGE' | Format-Table -AutoSize | Out-String -Width 300
-          Get-ChildItem 'HKLM:\SOFTWARE\Policies\Microsoft\Edge', 'HKCU:\SOFTWARE\Policies\Microsoft\Edge' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { $_.Name; $_ | Get-ItemProperty | Out-String -Width 300 }
-          Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Edge', 'HKCU:\SOFTWARE\Policies\Microsoft\Edge' -ErrorAction SilentlyContinue | Out-String -Width 300
-          $pol = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge'
-          if ((Get-ItemProperty $pol -ErrorAction SilentlyContinue).RemoteDebuggingAllowed -eq 0) { Set-ItemProperty $pol RemoteDebuggingAllowed 1; "re-enabled RemoteDebuggingAllowed" }
           $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
           $p = Start-Process $env:RUNE_E2E_APP -PassThru
           Start-Sleep 20
           "app alive: $(-not $p.HasExited) exit: $($p.ExitCode)"
+          Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | Select-Object -First 1 -ExpandProperty CommandLine
           try { (Invoke-WebRequest http://127.0.0.1:9222/json/version -TimeoutSec 5).Content } catch { "no devtools: $_" }
           Get-ChildItem "$env:LOCALAPPDATA\dev.rune.desktop" -Recurse -Depth 2 -ErrorAction SilentlyContinue | Select-Object -First 15 FullName
           Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
