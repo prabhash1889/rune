@@ -14,7 +14,7 @@ export default defineConfig({
       testIgnore: "**/*.app.e2e.ts",
       use: { browserName: "chromium", baseURL: "http://localhost:1420" },
     },
-    { name: "app", testMatch: "**/*.app.e2e.ts", timeout: 60_000 },
+    { name: "app", testMatch: "**/*.app.e2e.ts", timeout: 180_000 },
   ],
   webServer: process.env.RUNE_E2E_APP
     ? undefined

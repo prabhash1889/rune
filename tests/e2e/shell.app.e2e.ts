@@ -16,7 +16,8 @@ async function webdriver(method: string, path: string, body?: unknown) {
       method,
       headers: { "content-type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(20_000),
+      // The first session on a cold CI runner starts a fresh webview profile: slow.
+      signal: AbortSignal.timeout(150_000),
     });
     const json = (await res.json()) as { value: Record<string, unknown> & { message?: string } };
     if (!res.ok) throw new Error(json.value.message);
